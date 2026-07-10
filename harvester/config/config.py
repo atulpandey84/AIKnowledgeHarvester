@@ -53,6 +53,7 @@ class AppConfig:
     ])
     ignored_domains: List[str] = field(default_factory=lambda: ["doubleclick.net", "googleadservices.com"])
     allowed_domains: List[str] = field(default_factory=list)
+    search_websites: List[str] = field(default_factory=list) # Websites to restrict search to
 
     # Embedding settings
     embedding_model: str = "nomic-embed-text"

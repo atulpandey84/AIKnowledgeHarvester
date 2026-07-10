@@ -1,11 +1,10 @@
-# Default Enterprise Knowledge Harvester Configuration
-base_storage_path: "KnowledgeBase"
-database_path: "KnowledgeBase/harvester.db"
+base_storage_path: KnowledgeBase
+database_path: KnowledgeBase/harvester.db
 thread_count: 4
 timeout: 30.0
 retry_count: 3
 scheduling_interval_seconds: 3600
-logging_level: "INFO"
+logging_level: INFO
 download_images: true
 max_image_size_bytes: 5242880
 min_image_dimension: 100
@@ -14,21 +13,69 @@ minimum_article_length_words: 100
 max_crawl_depth: 2
 rate_limiting_delay_seconds: 1.0
 search_providers:
-  - "rss"
-  - "duckduckgo"
+- rss
+- duckduckgo
+rss_feeds:
+- name: Linux Mint
+  url: https://linuxmint-se.org/feed
+- name: Ubuntu
+  url: https://ubuntu.com/blog/feed
+- name: Google Cloud
+  url: https://cloud.google.com/blog/rss
+- name: OpenAI
+  url: https://openai.com/blog/rss
+- name: Anthropic
+  url: https://www.anthropic.com/index.xml
+- name: Microsoft
+  url: https://blogs.microsoft.com/feed/
+- name: NVIDIA
+  url: https://blogs.nvidia.com/feed/
+- name: Reuters
+  url: http://feeds.reuters.com/reuters/topNews
+- name: BBC
+  url: http://feeds.bbci.co.uk/news/rss.xml
+- name: The Verge
+  url: https://www.theverge.com/rss/index.xml
+- name: Ars Technica
+  url: https://feeds.arstechnica.com/arstechnica/index
+- name: TechCrunch
+  url: https://techcrunch.com/feed/
+- name: KrebsOnSecurity
+  url: https://krebsonsecurity.com/feed/
+- name: Cloudflare
+  url: https://blog.cloudflare.com/rss/
+- name: AWS
+  url: https://aws.amazon.com/blogs/aws/feed/
+- name: Red Hat
+  url: https://www.redhat.com/en/blog/rss
+- name: HashiCorp
+  url: https://www.hashicorp.com/blog/feed.xml
+- name: Python.org
+  url: https://www.python.org/blogs/feed/
+- name: GitHub Blog
+  url: https://github.blog/feed/
 ignored_domains:
-  - "doubleclick.net"
-  - "googleadservices.com"
+- doubleclick.net
+- googleadservices.com
 allowed_domains: []
-embedding_model: "nomic-embed-text"
-ollama_base_url: "http://localhost:11434"
-vector_db_type: "sqlite"
+search_websites: []
+embedding_model: nomic-embed-text
+ollama_base_url: http://localhost:11434
+vector_db_type: sqlite
 llm_enabled: false
-llm_model: "llama3"
+llm_model: llama3
 summarization_enabled: true
 summarization_settings:
   short_len: 150
   long_len: 500
   bullets_count: 5
-duplicate_detection_method: "sha256"
+duplicate_detection_method: sha256
 simhash_threshold: 3
+user_agent_pool:
+- Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko)
+  Chrome/120.0.0.0 Safari/537.36
+- Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like
+  Gecko) Version/17.0 Safari/605.1.15
+- Mozilla/5.0 (X11; Linux x86_64; rv:109.0) Gecko/20100101 Firefox/119.0
+- Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko)
+  Edge/120.0.0.0
