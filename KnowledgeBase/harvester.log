@@ -1,0 +1,2 @@
+{"timestamp": "2026-07-10 11:33:28,759", "level": "INFO", "module": "sqlite_db", "message": "Initializing database at: KnowledgeBase/harvester.db"}
+{"timestamp": "2026-07-10 11:34:03,406", "level": "INFO", "module": "sqlite_db", "message": "Initializing database at: KnowledgeBase/harvester.db"}

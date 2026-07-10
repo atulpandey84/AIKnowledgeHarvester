@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Local Testing</title>
+    <style>
+        :root {
+            --bg-color: #121212;
+            --text-color: #e0e0e0;
+            --primary-color: #29b6f6;
+            --card-bg: #1e1e1e;
+            --border-color: #333333;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            line-height: 1.6;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        h1, h2, h3, h4 {
+            color: var(--primary-color);
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 8px;
+        }
+        .metadata-box {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 15px;
+            margin-bottom: 30px;
+            font-size: 0.9em;
+        }
+        .metadata-box table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .metadata-box td {
+            padding: 4px 8px;
+        }
+        .metadata-box td.label {
+            font-weight: bold;
+            color: var(--primary-color);
+            width: 150px;
+        }
+        pre, code {
+            background-color: #272727;
+            border-radius: 4px;
+            font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, Courier, monospace;
+            font-size: 0.9em;
+        }
+        pre {
+            padding: 15px;
+            overflow-x: auto;
+            border: 1px solid var(--border-color);
+        }
+        code {
+            padding: 2px 4px;
+        }
+        img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 6px;
+            display: block;
+            margin: 20px auto;
+            border: 1px solid var(--border-color);
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+        th, td {
+            border: 1px solid var(--border-color);
+            padding: 8px 12px;
+            text-align: left;
+        }
+        th {
+            background-color: var(--card-bg);
+            color: var(--primary-color);
+        }
+        a {
+            color: var(--primary-color);
+            text-decoration: none;
+        }
+        a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <h1>Local Testing</h1>
+
+    <div class="metadata-box">
+        <table>
+            <tr>
+                <td class="label">Source URL:</td>
+                <td><a href="https://www.google.com" target="_blank">https://www.google.com</a></td>
+            </tr>
+            <tr>
+                <td class="label">Publisher:</td>
+                <td>Unknown</td>
+            </tr>
+            <tr>
+                <td class="label">Published Date:</td>
+                <td>Unknown</td>
+            </tr>
+            <tr>
+                <td class="label">Harvest Date:</td>
+                <td>2026-07-01 12:00:00</td>
+            </tr>
+            <tr>
+                <td class="label">Topic:</td>
+                <td>Artificial_Intelligence</td>
+            </tr>
+            <tr>
+                <td class="label">Keywords:</td>
+                <td>test, storage</td>
+            </tr>
+        </table>
+    </div>
+
+    <article>
+        <p>Hello! <img height="92" src="images/img001.png" width="272"/></p>
+    </article>
+</body>
+</html>

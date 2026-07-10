@@ -1,0 +1,34 @@
+# Default Enterprise Knowledge Harvester Configuration
+base_storage_path: "KnowledgeBase"
+database_path: "KnowledgeBase/harvester.db"
+thread_count: 4
+timeout: 30.0
+retry_count: 3
+scheduling_interval_seconds: 3600
+logging_level: "INFO"
+download_images: true
+max_image_size_bytes: 5242880
+min_image_dimension: 100
+max_articles_per_topic: 10
+minimum_article_length_words: 100
+max_crawl_depth: 2
+rate_limiting_delay_seconds: 1.0
+search_providers:
+  - "rss"
+  - "duckduckgo"
+ignored_domains:
+  - "doubleclick.net"
+  - "googleadservices.com"
+allowed_domains: []
+embedding_model: "nomic-embed-text"
+ollama_base_url: "http://localhost:11434"
+vector_db_type: "sqlite"
+llm_enabled: false
+llm_model: "llama3"
+summarization_enabled: true
+summarization_settings:
+  short_len: 150
+  long_len: 500
+  bullets_count: 5
+duplicate_detection_method: "sha256"
+simhash_threshold: 3

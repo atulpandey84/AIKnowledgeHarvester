@@ -1,0 +1,37 @@
+{
+    "title": "Python 3.13.2 and 3.12.9 now available!",
+    "source_url": "https://blog.python.org/2025/02/python-3132-and-3129-now-available/",
+    "canonical_url": "https://blog.python.org/2025/02/python-3132-and-3129-now-available/",
+    "author": null,
+    "publisher": "blog.python.org",
+    "published_date": "2025-02-04",
+    "updated_date": null,
+    "language": "en",
+    "country": null,
+    "reading_time_minutes": 1,
+    "word_count": 128,
+    "sha256": "9358a692e2d103b0c700f251bd6e4622c02acc8130d516c9c1b83da1c8fa5c30",
+    "harvest_timestamp": "2026-07-10 11:30:53",
+    "topic": "Local RAG Pipelines",
+    "search_provider": "rss",
+    "rss_feed": "Python Blog",
+    "keywords": [
+        "releases",
+        "release",
+        "available",
+        "downloads",
+        "small",
+        "maintenance",
+        "python",
+        "tireless",
+        "changes",
+        "just"
+    ],
+    "categories": [
+        "AI",
+        "Programming"
+    ],
+    "license": null,
+    "content_type": "text/html",
+    "images": []
+}

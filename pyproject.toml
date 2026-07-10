@@ -1,0 +1,32 @@
+[build-system]
+requires = ["setuptools>=61.0.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "harvester"
+version = "2.0.0"
+description = "Enterprise Knowledge Harvester v2"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "pyyaml>=6.0",
+    "feedparser>=6.0",
+    "beautifulsoup4>=4.12",
+    "trafilatura>=1.6",
+    "pypdf>=4.0",
+    "httpx>=0.25",
+    "fastapi>=0.100",
+    "uvicorn>=0.22",
+    "click>=8.1",
+    "jinja2>=3.1"
+]
+
+[project.scripts]
+harvester = "harvester.cli.main:main"
+
+[tool.setuptools]
+packages = ["harvester", "harvester.config", "harvester.core", "harvester.crawler", "harvester.search", "harvester.rss", "harvester.extractor", "harvester.storage", "harvester.database", "harvester.embeddings", "harvester.utils", "harvester.models", "harvester.workers", "harvester.logging_util", "harvester.api", "harvester.cli"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]

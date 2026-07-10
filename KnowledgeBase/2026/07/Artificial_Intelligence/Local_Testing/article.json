@@ -1,0 +1,37 @@
+{
+    "title": "Local Testing",
+    "body_text": "Body of the testing article.",
+    "markdown": "# Local Testing\n\n**Source:** [https://www.google.com](https://www.google.com)\n**Topic:** Artificial_Intelligence\n**Publisher:** Unknown\n**Published Date:** Unknown\n**Harvest Date:** 2026-07-01 12:00:00\n**Keywords:** test, storage\n\n---\n\nBody of the testing article.",
+    "metadata": {
+        "title": "Local Testing",
+        "source_url": "https://www.google.com",
+        "canonical_url": null,
+        "author": null,
+        "publisher": null,
+        "published_date": null,
+        "updated_date": null,
+        "language": "en",
+        "country": null,
+        "reading_time_minutes": null,
+        "word_count": null,
+        "sha256": "sample_sha",
+        "harvest_timestamp": "2026-07-01 12:00:00",
+        "topic": "Artificial_Intelligence",
+        "search_provider": null,
+        "rss_feed": null,
+        "keywords": [
+            "test",
+            "storage"
+        ],
+        "categories": [],
+        "license": null,
+        "content_type": "text/html",
+        "images": [
+            {
+                "original_url": "https://www.google.com/images/branding/googlelogo/1x/googlelogo_color_272x92dp.png",
+                "local_path": "images/img001.png",
+                "size": 5969
+            }
+        ]
+    }
+}

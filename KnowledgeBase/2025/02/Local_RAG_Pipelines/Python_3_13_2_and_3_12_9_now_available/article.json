@@ -1,0 +1,42 @@
+{
+    "title": "Python 3.13.2 and 3.12.9 now available!",
+    "body_text": "Python 3.13.2 and 3.12.9 now available!\nA small release day today! That is to say the releases are relatively small; the day itself was of average size, as most days are.\nPython 3.13.2\nPython 3.13’s second maintenance release. About 250 changes went into this update, and can be yours for free if you just upgrade now.\npython.org/downloads/release/python-3132\nPython 3.12.9\nPython 3.12’s ninth maintenance release already. Just 180 changes for 3.12, but it’s still worth upgrading.\npython.org/downloads/release/python-3129\nEnjoy the new releases\nThanks to all of the many volunteers who help make Python Development and these releases possible! Please consider supporting our efforts by volunteering yourself or through organization contributions to the Python Software Foundation.\nRegards from your tireless, tireless release team,\nThomas Wouters\nNed Deily\nSteve Dower\nŁukasz Langa",
+    "markdown": "# Python 3.13.2 and 3.12.9 now available!\n\n**Source:** [https://blog.python.org/2025/02/python-3132-and-3129-now-available/](https://blog.python.org/2025/02/python-3132-and-3129-now-available/)\n**Topic:** Local RAG Pipelines\n**Publisher:** blog.python.org\n**Published Date:** 2025-02-04\n**Harvest Date:** 2026-07-10 11:30:53\n**Keywords:** releases, release, available, downloads, small, maintenance, python, tireless, changes, just\n\n---\n\nPython 3.13.2 and 3.12.9 now available!\nA small release day today! That is to say the releases are relatively small; the day itself was of average size, as most days are.\nPython 3.13.2\nPython 3.13’s second maintenance release. About 250 changes went into this update, and can be yours for free if you just upgrade now.\npython.org/downloads/release/python-3132\nPython 3.12.9\nPython 3.12’s ninth maintenance release already. Just 180 changes for 3.12, but it’s still worth upgrading.\npython.org/downloads/release/python-3129\nEnjoy the new releases\nThanks to all of the many volunteers who help make Python Development and these releases possible! Please consider supporting our efforts by volunteering yourself or through organization contributions to the Python Software Foundation.\nRegards from your tireless, tireless release team,\nThomas Wouters\nNed Deily\nSteve Dower\nŁukasz Langa",
+    "metadata": {
+        "title": "Python 3.13.2 and 3.12.9 now available!",
+        "source_url": "https://blog.python.org/2025/02/python-3132-and-3129-now-available/",
+        "canonical_url": "https://blog.python.org/2025/02/python-3132-and-3129-now-available/",
+        "author": null,
+        "publisher": "blog.python.org",
+        "published_date": "2025-02-04",
+        "updated_date": null,
+        "language": "en",
+        "country": null,
+        "reading_time_minutes": 1,
+        "word_count": 128,
+        "sha256": "9358a692e2d103b0c700f251bd6e4622c02acc8130d516c9c1b83da1c8fa5c30",
+        "harvest_timestamp": "2026-07-10 11:30:53",
+        "topic": "Local RAG Pipelines",
+        "search_provider": "rss",
+        "rss_feed": "Python Blog",
+        "keywords": [
+            "releases",
+            "release",
+            "available",
+            "downloads",
+            "small",
+            "maintenance",
+            "python",
+            "tireless",
+            "changes",
+            "just"
+        ],
+        "categories": [
+            "AI",
+            "Programming"
+        ],
+        "license": null,
+        "content_type": "text/html",
+        "images": []
+    }
+}

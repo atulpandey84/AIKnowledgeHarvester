@@ -1,0 +1,18 @@
+Metadata-Version: 2.4
+Name: harvester
+Version: 2.0.0
+Summary: Enterprise Knowledge Harvester v2
+Requires-Python: >=3.12
+Description-Content-Type: text/markdown
+Requires-Dist: pyyaml>=6.0
+Requires-Dist: feedparser>=6.0
+Requires-Dist: beautifulsoup4>=4.12
+Requires-Dist: trafilatura>=1.6
+Requires-Dist: pypdf>=4.0
+Requires-Dist: httpx>=0.25
+Requires-Dist: fastapi>=0.100
+Requires-Dist: uvicorn>=0.22
+Requires-Dist: click>=8.1
+Requires-Dist: jinja2>=3.1
+
+# AIKnowledgeHarvester

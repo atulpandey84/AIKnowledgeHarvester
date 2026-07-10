@@ -1,0 +1,2 @@
+[console_scripts]
+harvester = harvester.cli.main:main

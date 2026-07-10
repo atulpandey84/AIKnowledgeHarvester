@@ -1,0 +1,15 @@
+# Bytecode / Runtime Artifacts
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.coverage
+htmlcov/
+*.egg-info/
+dist/
+build/
+
+# Local database and downloaded KnowledgeBase artifacts
+# Note: Keep simple structure or exclude as needed.
+# KnowledgeBase/
