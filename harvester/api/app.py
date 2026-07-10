@@ -1,5 +1,7 @@
 from fastapi import FastAPI, Query, HTTPException
+from pydantic import BaseModel
 from typing import List, Dict, Any, Optional
+from harvester.config import config as app_conf_module
 from harvester.config.config import AppConfig
 from harvester.database.sqlite_db import SQLiteDatabase
 from harvester.logging_util import get_logger
@@ -15,6 +17,13 @@ app = FastAPI(
     description="Offline REST API layer to browse, search, and monitor offline harvested enterprise documents.",
     version="2.0.0"
 )
+
+class WebsiteRequest(BaseModel):
+    domain: str
+
+class FeedRequest(BaseModel):
+    name: str
+    url: str
 
 @app.get("/health")
 def health_check() -> Dict[str, str]:
@@ -64,3 +73,88 @@ def get_article(article_id: int) -> Dict[str, Any]:
     except Exception as e:
         logger.error(f"Failed to retrieve article ID {article_id}: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+# --- Website API Management ---
+@app.get("/websites")
+def get_websites() -> List[str]:
+    # reload config to get latest saved file states
+    global config
+    config = AppConfig.load_from_file("config.yaml")
+    return config.search_websites
+
+@app.post("/websites")
+def add_website(payload: WebsiteRequest) -> Dict[str, Any]:
+    global config
+    config = AppConfig.load_from_file("config.yaml")
+
+    clean_domain = payload.domain.strip().lower()
+    if not clean_domain:
+        raise HTTPException(status_code=400, detail="Invalid domain")
+
+    if clean_domain in config.search_websites:
+        return {"status": "already_exists", "domain": clean_domain}
+
+    config.search_websites.append(clean_domain)
+    config.save_to_yaml("config.yaml")
+    return {"status": "added", "domain": clean_domain}
+
+@app.delete("/websites/{domain}")
+def remove_website(domain: str) -> Dict[str, Any]:
+    global config
+    config = AppConfig.load_from_file("config.yaml")
+
+    clean_domain = domain.strip().lower()
+    if clean_domain not in config.search_websites:
+        raise HTTPException(status_code=404, detail=f"Website {clean_domain} not found")
+
+    config.search_websites.remove(clean_domain)
+    config.save_to_yaml("config.yaml")
+    return {"status": "removed", "domain": clean_domain}
+
+# --- RSS Feed API Management ---
+@app.get("/feeds")
+def get_feeds() -> List[Dict[str, str]]:
+    global config
+    config = AppConfig.load_from_file("config.yaml")
+    return config.rss_feeds
+
+@app.post("/feeds")
+def add_feed(payload: FeedRequest) -> Dict[str, Any]:
+    global config
+    config = AppConfig.load_from_file("config.yaml")
+
+    name_clean = payload.name.strip()
+    url_clean = payload.url.strip()
+
+    if not name_clean or not url_clean:
+        raise HTTPException(status_code=400, detail="Name and URL must not be empty.")
+
+    for f in config.rss_feeds:
+        if f.get("name", "").lower() == name_clean.lower():
+            raise HTTPException(status_code=400, detail=f"Feed with name '{name_clean}' already exists.")
+        if f.get("url", "").lower() == url_clean.lower():
+            raise HTTPException(status_code=400, detail=f"Feed URL '{url_clean}' is already registered under name '{f.get('name')}'")
+
+    config.rss_feeds.append({"name": name_clean, "url": url_clean})
+    config.save_to_yaml("config.yaml")
+    return {"status": "added", "feed": {"name": name_clean, "url": url_clean}}
+
+@app.delete("/feeds/{name}")
+def remove_feed(name: str) -> Dict[str, Any]:
+    global config
+    config = AppConfig.load_from_file("config.yaml")
+
+    name_clean = name.strip().lower()
+
+    target_feed = None
+    for f in config.rss_feeds:
+        if f.get("name", "").lower() == name_clean:
+            target_feed = f
+            break
+
+    if not target_feed:
+        raise HTTPException(status_code=404, detail=f"Feed with name '{name}' not found.")
+
+    config.rss_feeds.remove(target_feed)
+    config.save_to_yaml("config.yaml")
+    return {"status": "removed", "feed_name": target_feed["name"]}

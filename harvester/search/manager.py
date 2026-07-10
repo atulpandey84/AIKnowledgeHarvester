@@ -17,6 +17,7 @@ class SearchManager:
         """
         Executes search across enabled provider adapters.
         Removes duplicates, fallbacks gracefully, scores and merges results.
+        If config.search_websites is configured, restricts DuckDuckGo query to those sites using 'site:website.com query'.
         """
         results: List[Dict[str, Any]] = []
         for provider in self.config.search_providers:
@@ -27,14 +28,21 @@ class SearchManager:
             try:
                 logger.info(f"Querying search provider '{provider}' for query: '{query}'")
                 if provider == "duckduckgo":
-                    provider_results = self._search_duckduckgo(query)
+                    if self.config.search_websites:
+                        logger.info(f"Restricting DDG search to specific websites: {self.config.search_websites}")
+                        for site in self.config.search_websites:
+                            site_query = f"site:{site} {query}"
+                            site_results = self._search_duckduckgo(site_query)
+                            results.extend(site_results)
+                    else:
+                        provider_results = self._search_duckduckgo(query)
+                        results.extend(provider_results)
                 elif provider == "searxng":
                     provider_results = self._search_searxng(query)
+                    results.extend(provider_results)
                 else:
                     logger.warning(f"Unsupported search provider: {provider}")
                     provider_results = []
-
-                results.extend(provider_results)
             except Exception as e:
                 logger.error(f"Search provider '{provider}' failed for query '{query}': {e}")
 
@@ -70,9 +78,6 @@ class SearchManager:
             soup = BeautifulSoup(response.content, "html.parser")
 
             results = []
-            links = soup.find_all("a", class_="result__url")
-            titles = soup.find_all("a", class_="result__snippet") # snippet or title link
-
             # Better element targeting
             result_blocks = soup.find_all("div", class_="result")
             for i, block in enumerate(result_blocks):
