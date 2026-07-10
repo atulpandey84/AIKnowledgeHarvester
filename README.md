@@ -11,6 +11,9 @@ Developed using Clean Architecture principles, this enterprise-grade pipeline sc
 - **Continuous Topic Management**: Monitored categories and keywords defined in `.topics.txt` featuring weights, comments, and prioritization (`[High]`, `[Medium]`, `[Low]`).
 - **Provider-Independent Search**: Pluggable search layer supporting RSS feed queries, DuckDuckGo HTML scraping, SearXNG, and automatic result scoring, merging, and deduping.
 - **Robust Downloader**: Built-in HTTPDownloader with connection pooling (HTTP/2), compression (gzip/deflate/brotli), randomized browser User-Agent rotation, robots.txt awareness, and Retry-After rate-limiting compliance.
+- **Dynamic Search Constraints**: Option to dynamically restrict web search results to specific target websites (e.g. `ubuntu.com`, `python.org`), managed seamlessly via CLI and REST API.
+- **Auto-Healing & Self-Pruning**: Built-in resilience that automatically intercepts connection and host-resolution errors (such as `[Errno -2] Name or service not known`). It dynamically prunes dead RSS feeds or broken website restrictions from the YAML configuration, ensuring long-term continuous unattended runs.
+- **Domain-Specific Adaptive Rate-Limiting**: Intelligently tracks delay intervals and request timestamps for individual domains. When encountering a `403 Forbidden` or `429 Too Many Requests` status, the downloader rotates the User-Agent, backs off, scales up domain delays to prevent blocking, and gracefully cools delays down once success is restored.
 - **Noise-Free Content Extraction**: Utilizes Trafilatura with a BeautifulSoup4-based fallback cleaner to strip cookies, popups, newsletter prompts, header/footer elements, and menus.
 - **Local Asset Isolation**: Downloads images locally (under `images/`), discards tracking pixels/icons, and rewrites HTML links to maintain absolute offline compatibility.
 - **Full PDF Parsing**: Automated PDF detection, text extraction, HTML preview generation, and original document archiving.
@@ -50,7 +53,7 @@ KnowledgeHarvester/
 │
 ├── tests/                  # Pytest unit and integration suite
 ├── config.yaml             # Main configuration file
-└── .topics.txt             # Target watch-list topics
+└── .topics.txt             # Target watchlist topics
 ```
 
 ---
@@ -103,6 +106,8 @@ search_providers:
 ignored_domains:
   - "doubleclick.net"
   - "googleadservices.com"
+allowed_domains: []
+search_websites: []
 embedding_model: "nomic-embed-text"
 ollama_base_url: "http://localhost:11434"
 vector_db_type: "sqlite"
@@ -165,6 +170,16 @@ The primary operational interface is the Click command-line utility. Run the `ha
   harvester topic-remove "Linux Mint Customization"
   ```
 
+- **Manage Search Website Restrictions**:
+  - Add domain: `harvester website add ubuntu.com`
+  - Remove domain: `harvester website remove ubuntu.com`
+  - List domains: `harvester website list`
+
+- **Manage RSS Subscriptions**:
+  - Add Feed: `harvester feed add "Ubuntu Blog" "https://ubuntu.com/blog/feed"`
+  - Remove Feed: `harvester feed remove "Ubuntu Blog"`
+  - List Feeds: `harvester feed list`
+
 - **Integrity Verification**: Scan local files to ensure formatting and metadata validation:
   ```bash
   harvester verify
@@ -186,6 +201,14 @@ uvicorn harvester.api.app:app --host 127.0.0.1 --port 8000 --reload
 - **Database Stats**: `GET /stats`
 - **Article Full-Text Search**: `GET /search?q=Python&limit=5`
 - **Article Details**: `GET /articles/{article_id}`
+- **Websites Constraints**:
+  - `GET /websites` (List domains)
+  - `POST /websites` (Add domain, body: `{"domain": "ubuntu.com"}`)
+  - `DELETE /websites/{domain}` (Remove domain)
+- **RSS Subscriptions**:
+  - `GET /feeds` (List feeds)
+  - `POST /feeds` (Add subscription, body: `{"name": "Ubuntu Blog", "url": "https://ubuntu.com/blog/feed"}`)
+  - `DELETE /feeds/{name}` (Remove subscription)
 
 ---
 
@@ -219,7 +242,7 @@ Ensure code stability and check coverage using `pytest`:
 pytest -v --cov=harvester
 ```
 
-All 7 integration test units covering extraction, config, topic parsing, cosine vector similarity, database caching, and storage layout generation should pass with zero warnings.
+All integration test units covering extraction, config, topic parsing, cosine vector similarity, database caching, search restrictions, and feed managers should pass with zero warnings.
 
 ---
 
