@@ -1,5 +1,6 @@
 import time
 import datetime
+import threading
 import concurrent.futures
 from typing import List, Dict, Any, Optional
 from harvester.config.config import AppConfig
@@ -18,9 +19,10 @@ from harvester.logging_util import get_logger
 logger = get_logger()
 
 class HarvestingPipeline:
-    def __init__(self, config: AppConfig):
+    def __init__(self, config: AppConfig, config_file: str = "config.yaml"):
         self.config = config
-        self.downloader = HTTPDownloader(config)
+        self.config_file = config_file
+        self.downloader = HTTPDownloader(config, config_file=config_file)
         self.rss_mgr = RSSManager(config, self.downloader)
         self.search_mgr = SearchManager(config, self.downloader)
         self.extractor = ContentExtractor()
@@ -28,6 +30,9 @@ class HarvestingPipeline:
         self.embed_gen = EmbeddingGenerator(config)
         self.ai_service = AIService(config)
         self.storage_mgr = StorageManager(config, self.downloader)
+
+        # Threading lock for multi-threaded stats update
+        self.stats_lock = threading.Lock()
 
         # Pipeline stats
         self.stats = {
@@ -53,7 +58,8 @@ class HarvestingPipeline:
             # 1. Check DB for URL duplicate
             if self.db.url_exists(url):
                 logger.info(f"Duplicate detected: URL already harvested {url}")
-                self.stats["duplicates_removed"] += 1
+                with self.stats_lock:
+                    self.stats["duplicates_removed"] += 1
                 return None
 
             # 2. Download content
@@ -75,7 +81,8 @@ class HarvestingPipeline:
             sha_hash = compute_sha256(extracted["body_text"])
             if self.db.article_exists(sha_hash):
                 logger.info(f"Duplicate detected: SHA256 hash already exists for content of {url}")
-                self.stats["duplicates_removed"] += 1
+                with self.stats_lock:
+                    self.stats["duplicates_removed"] += 1
                 return None
 
             # 5. Extract additional keywords & entities
@@ -134,21 +141,23 @@ class HarvestingPipeline:
             # 8. Storage: Write Local Files (rewriting images inside)
             saved_folder = self.storage_mgr.write_article_files(article)
 
-            # Calculate image downloads
-            self.stats["images_downloaded"] += len(article.images)
-            for img in article.images:
-                self.stats["storage_consumed_bytes"] += img.size_bytes
+            # Calculate image downloads & update stats thread-safely
+            with self.stats_lock:
+                self.stats["images_downloaded"] += len(article.images)
+                for img in article.images:
+                    self.stats["storage_consumed_bytes"] += img.size_bytes
+                self.stats["articles_downloaded"] += 1
 
             # 9. Insert to SQLite DB
             self.db.insert_article(article)
 
-            self.stats["articles_downloaded"] += 1
             logger.info(f"Successfully processed and stored article: {extracted['title']}")
             return saved_folder
 
         except Exception as e:
             logger.error(f"Error processing URL {url}: {e}", exc_info=True)
-            self.stats["failures"] += 1
+            with self.stats_lock:
+                self.stats["failures"] += 1
             return None
 
     def run_pipeline(self) -> Dict[str, Any]:
@@ -165,7 +174,8 @@ class HarvestingPipeline:
         logger.info(f"Loaded {len(topics)} topics, {len(active_topics)} are active.")
 
         # 1. Fetch all RSS items first (before search)
-        self.stats["rss_checked"] = len(self.config.rss_feeds)
+        with self.stats_lock:
+            self.stats["rss_checked"] = len(self.config.rss_feeds)
         rss_items = []
         if "rss" in self.config.search_providers:
             rss_items = self.rss_mgr.fetch_all_feeds()
@@ -238,8 +248,10 @@ class HarvestingPipeline:
 
         self.downloader.close()
 
-        self.stats["elapsed_time_seconds"] = round(time.time() - start_time, 2)
-        logger.info(f"Pipeline finished. Stats: {self.stats}")
-        return self.stats
+        with self.stats_lock:
+            self.stats["elapsed_time_seconds"] = round(time.time() - start_time, 2)
+            final_stats = dict(self.stats)
+        logger.info(f"Pipeline finished. Stats: {final_stats}")
+        return final_stats
 
 from urllib.parse import urlparse
