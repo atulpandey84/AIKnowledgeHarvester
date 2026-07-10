@@ -1,0 +1,14 @@
+[High]
+Artificial Intelligence (category:AI, weight:2.0)
+Large Language Models (category:AI, weight:1.8)
+Linux Mint Security (category:Security, weight:1.5)
+Enterprise Linux (category:OS)
+
+[Medium]
+Google Cloud AI (category:Cloud, weight:1.2)
+Cybersecurity Vulnerabilities (category:Security)
+Python 3.12 (category:Programming)
+
+[Low]
+Local RAG Pipelines (category:AI, weight:0.8)
+Linux Mint Customization (category:Linux, enabled:false)

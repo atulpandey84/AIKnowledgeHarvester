@@ -1,0 +1,175 @@
+import sys
+import os
+import click
+import yaml
+import json
+from harvester.config.config import AppConfig
+from harvester.core.topics import parse_topics, format_topics
+from harvester.core.models import Topic
+from harvester.workers.pipeline import HarvestingPipeline
+from harvester.database.sqlite_db import SQLiteDatabase
+from harvester.logging_util import setup_logging, get_logger
+
+logger = get_logger()
+
+@click.group()
+@click.option('--config-file', default='config.yaml', help='Path to configuration file.')
+@click.pass_context
+def main(ctx, config_file):
+    """Enterprise Knowledge Harvester v2 - Master CLI Control Panel."""
+    # Ensure ctx.obj is a dict
+    ctx.ensure_object(dict)
+
+    # Load configuration
+    config = AppConfig.load_from_file(config_file)
+    ctx.obj['config'] = config
+
+    # Setup Logging
+    setup_logging(config.logging_level)
+
+@main.command()
+@click.pass_context
+def run(ctx):
+    """Execute the full continuously scheduled pipeline run once."""
+    config = ctx.obj['config']
+    click.echo(f"Initializing Harvester Run... Threads: {config.thread_count}")
+
+    pipeline = HarvestingPipeline(config)
+    stats = pipeline.run_pipeline()
+
+    click.echo("\n--- Harvest Session Statistics ---")
+    click.echo(f"Articles Harvested: {stats['articles_downloaded']}")
+    click.echo(f"RSS Feeds Checked: {stats['rss_checked']}")
+    click.echo(f"Search Providers Used: {stats['search_providers_used']}")
+    click.echo(f"Duplicates Removed: {stats['duplicates_removed']}")
+    click.echo(f"Images Saved: {stats['images_downloaded']}")
+    click.echo(f"Storage Allocated: {stats['storage_consumed_bytes']} bytes")
+    click.echo(f"Execution Failures: {stats['failures']}")
+    click.echo(f"Elapsed Time: {stats['elapsed_time_seconds']}s")
+
+@main.command()
+@click.pass_context
+def stats(ctx):
+    """View offline Knowledge Base sqlite database statistics."""
+    config = ctx.obj['config']
+    db = SQLiteDatabase(config)
+    stats_dict = db.get_stats()
+
+    click.echo("\n--- Offline Knowledge Database Stats ---")
+    click.echo(f"Total Cached Articles: {stats_dict['total_articles']}")
+    click.echo(f"Total Local Images: {stats_dict['total_images']}")
+    click.echo(f"Total Images Size: {stats_dict['total_images_size_bytes']} bytes")
+    click.echo(f"Registered/Harvested Topics: {', '.join(stats_dict['topics_covered'])}")
+
+@main.command(name="topic-add")
+@click.argument('topic_name')
+@click.option('--priority', default='Medium', help='High, Medium, or Low.')
+@click.option('--category', default='', help='A general technology category.')
+@click.option('--weight', default=1.0, help='Weight priority factor.')
+@click.pass_context
+def topic_add(ctx, topic_name, priority, category, weight):
+    """Add a new target topic to watch list (.topics.txt)."""
+    topics = parse_topics(".topics.txt")
+
+    # Check duplicate
+    if any(t.name.lower() == topic_name.lower() for t in topics):
+        click.echo(f"Error: Topic '{topic_name}' already exists.")
+        sys.exit(1)
+
+    new_topic = Topic(
+        name=topic_name,
+        priority=priority.capitalize(),
+        category=category if category else None,
+        weight=weight,
+        enabled=True
+    )
+    topics.append(new_topic)
+
+    formatted = format_topics(topics)
+    with open(".topics.txt", "w", encoding="utf-8") as f:
+        f.write(formatted + "\n")
+
+    click.echo(f"Topic '{topic_name}' successfully added with {priority} priority.")
+
+@main.command(name="topic-remove")
+@click.argument('topic_name')
+@click.pass_context
+def topic_remove(ctx, topic_name):
+    """Remove a target topic from watch list (.topics.txt)."""
+    topics = parse_topics(".topics.txt")
+
+    filtered = [t for t in topics if t.name.lower() != topic_name.lower()]
+    if len(filtered) == len(topics):
+        click.echo(f"Topic '{topic_name}' not found in watch list.")
+        sys.exit(1)
+
+    formatted = format_topics(filtered)
+    with open(".topics.txt", "w", encoding="utf-8") as f:
+        f.write(formatted + "\n")
+
+    click.echo(f"Topic '{topic_name}' successfully removed.")
+
+@main.command()
+@click.pass_context
+def doctor(ctx):
+    """System diagnostic, checking dependencies, directories, models and local server."""
+    click.echo("--- Diagnostic Doctor Report ---")
+    # Python Version
+    click.echo(f"Python Version: {sys.version}")
+    # Local Storage Directory
+    storage_ok = os.path.isdir("KnowledgeBase")
+    click.echo(f"KnowledgeBase Folder: {'[OK]' if storage_ok else '[WARNING - Creating now]'}")
+    if not storage_ok:
+        os.makedirs("KnowledgeBase", exist_ok=True)
+
+    # sqlite Database Status
+    try:
+        config = ctx.obj['config']
+        db = SQLiteDatabase(config)
+        db_stats = db.get_stats()
+        click.echo(f"SQLite Connection & Schema: [OK] ({db_stats['total_articles']} articles cached)")
+    except Exception as e:
+        click.echo(f"SQLite Database: [FAILED] - {e}")
+
+    # Local Ollama Status
+    try:
+        import httpx
+        resp = httpx.get(f"{ctx.obj['config'].ollama_base_url}/api/tags", timeout=2.0)
+        if resp.status_code == 200:
+            click.echo(f"Ollama Local Server: [OK] (Base URL: {ctx.obj['config'].ollama_base_url})")
+        else:
+            click.echo(f"Ollama Local Server: [OFFLINE] (Status Code: {resp.status_code})")
+    except Exception:
+        click.echo("Ollama Local Server: [OFFLINE] (No local service running on localhost:11434)")
+
+    # Libraries Checked
+    for lib in ["trafilatura", "bs4", "feedparser", "pypdf"]:
+        try:
+            __import__(lib)
+            click.echo(f"Dependency '{lib}': [OK]")
+        except ImportError:
+            click.echo(f"Dependency '{lib}': [MISSING]")
+
+@main.command()
+@click.pass_context
+def verify(ctx):
+    """Verify integrity of offline Knowledge Base files (HTML, JSON, Markdown)."""
+    click.echo("Scanning local storage layout and verifying file integrity...")
+    corrupt_count = 0
+    total_checked = 0
+
+    for root, dirs, files in os.walk("KnowledgeBase"):
+        if "article.json" in files:
+            total_checked += 1
+            article_json_path = os.path.join(root, "article.json")
+            try:
+                with open(article_json_path, "r", encoding="utf-8") as f:
+                    json.load(f)
+            except Exception as e:
+                click.echo(f"File validation failed on {article_json_path}: {e}")
+                corrupt_count += 1
+
+    click.echo(f"Verification process complete. Scanned directories: {total_checked}. Corrupt: {corrupt_count}")
+
+if __name__ == "__main__":
+    main()

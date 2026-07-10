@@ -1,0 +1,40 @@
+{
+    "title": "Mitigated API authentication bypass for python.org download metadata",
+    "source_url": "https://blog.python.org/2026/06/mitigated-api-bypass-for-download-metadata-python-dot-org/",
+    "canonical_url": "https://blog.python.org/2026/06/mitigated-api-bypass-for-download-metadata-python-dot-org/",
+    "author": null,
+    "publisher": "blog.python.org",
+    "published_date": "2026-06-23",
+    "updated_date": null,
+    "language": "en",
+    "country": null,
+    "reading_time_minutes": 4,
+    "word_count": 735,
+    "sha256": "fd3676c791b13f72c529959c8365a33bfbda28df38a6787f6b417a6e95afce46",
+    "harvest_timestamp": "2026-07-10 11:30:53",
+    "topic": "Google Cloud AI",
+    "search_provider": "rss",
+    "rss_feed": "Python Blog",
+    "keywords": [
+        "sigstore",
+        "were",
+        "authentication",
+        "audit",
+        "report",
+        "urls",
+        "python",
+        "february",
+        "vulnerability",
+        "auditing"
+    ],
+    "categories": [
+        "AI",
+        "Security",
+        "Programming",
+        "Networking",
+        "Databases"
+    ],
+    "license": null,
+    "content_type": "text/html",
+    "images": []
+}
