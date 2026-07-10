@@ -33,9 +33,11 @@ def main(ctx, config_file):
 def run(ctx):
     """Execute the full continuously scheduled pipeline run once."""
     config = ctx.obj['config']
+    config_file = ctx.obj['config_file']
     click.echo(f"Initializing Harvester Run... Threads: {config.thread_count}")
 
-    pipeline = HarvestingPipeline(config)
+    # Pass config_file dynamically to support custom config profiles
+    pipeline = HarvestingPipeline(config, config_file=config_file)
     stats = pipeline.run_pipeline()
 
     click.echo("\n--- Harvest Session Statistics ---")

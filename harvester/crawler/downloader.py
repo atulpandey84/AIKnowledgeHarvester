@@ -1,5 +1,6 @@
 import time
 import random
+import threading
 import urllib.robotparser
 from urllib.parse import urlparse
 import httpx
@@ -9,8 +10,9 @@ from harvester.config.config import AppConfig
 logger = get_logger()
 
 class HTTPDownloader:
-    def __init__(self, config: AppConfig):
+    def __init__(self, config: AppConfig, config_file: str = "config.yaml"):
         self.config = config
+        self.config_file = config_file
         # Setup connection pool and configuration options
         self.limits = httpx.Limits(max_keepalive_connections=5, max_connections=10)
         self.client = httpx.Client(
@@ -21,7 +23,8 @@ class HTTPDownloader:
         )
         self.robots_cache = {}
 
-        # Domain-specific rate limiting and delay scaling
+        # Domain-specific rate limiting and delay scaling with threading Lock protection
+        self.lock = threading.Lock()
         self.domain_delays = {} # domain -> current delay in seconds
         self.last_request_times = {} # domain -> timestamp of last request
 
@@ -33,20 +36,30 @@ class HTTPDownloader:
         base_url = f"{parsed_url.scheme}://{parsed_url.netloc}"
         robots_url = f"{base_url}/robots.txt"
 
-        if robots_url in self.robots_cache:
-            rp = self.robots_cache[robots_url]
-        else:
-            rp = urllib.robotparser.RobotFileParser()
-            try:
-                # Set a custom user agent to fetch robots.txt
-                headers = {"User-Agent": self.get_random_user_agent()}
-                resp = httpx.get(robots_url, headers=headers, timeout=5.0, follow_redirects=True)
-                if resp.status_code == 200:
-                    rp.parse(resp.text.splitlines())
-                else:
-                    rp.allow_all = True
-            except Exception:
+        with self.lock:
+            if robots_url in self.robots_cache:
+                rp = self.robots_cache[robots_url]
+                cached = True
+            else:
+                cached = False
+
+        if cached:
+            user_agent = self.get_random_user_agent()
+            return rp.can_fetch(user_agent, url)
+
+        rp = urllib.robotparser.RobotFileParser()
+        try:
+            # Set a custom user agent to fetch robots.txt
+            headers = {"User-Agent": self.get_random_user_agent()}
+            resp = httpx.get(robots_url, headers=headers, timeout=5.0, follow_redirects=True)
+            if resp.status_code == 200:
+                rp.parse(resp.text.splitlines())
+            else:
                 rp.allow_all = True
+        except Exception:
+            rp.allow_all = True
+
+        with self.lock:
             self.robots_cache[robots_url] = rp
 
         user_agent = self.get_random_user_agent()
@@ -59,23 +72,24 @@ class HTTPDownloader:
         parsed = urlparse(url)
         domain = parsed.netloc.lower()
 
-        # 1. Check & remove from search_websites
-        if domain in self.config.search_websites:
-            logger.warning(f"Auto-pruning invalid search website: {domain}")
-            self.config.search_websites.remove(domain)
-            self.config.save_to_yaml("config.yaml")
+        with self.lock:
+            # 1. Check & remove from search_websites
+            if domain in self.config.search_websites:
+                logger.warning(f"Auto-pruning invalid search website: {domain}")
+                self.config.search_websites.remove(domain)
+                self.config.save_to_yaml(self.config_file)
 
-        # 2. Check & remove from rss_feeds
-        feed_to_remove = None
-        for feed in self.config.rss_feeds:
-            feed_url = feed.get("url", "")
-            if feed_url == url or urlparse(feed_url).netloc.lower() == domain:
-                feed_to_remove = feed
-                break
-        if feed_to_remove:
-            logger.warning(f"Auto-pruning invalid RSS feed: {feed_to_remove['name']} ({feed_to_remove['url']})")
-            self.config.rss_feeds.remove(feed_to_remove)
-            self.config.save_to_yaml("config.yaml")
+            # 2. Check & remove from rss_feeds
+            feed_to_remove = None
+            for feed in self.config.rss_feeds:
+                feed_url = feed.get("url", "")
+                if feed_url == url or urlparse(feed_url).netloc.lower() == domain:
+                    feed_to_remove = feed
+                    break
+            if feed_to_remove:
+                logger.warning(f"Auto-pruning invalid RSS feed: {feed_to_remove['name']} ({feed_to_remove['url']})")
+                self.config.rss_feeds.remove(feed_to_remove)
+                self.config.save_to_yaml(self.config_file)
 
     def download(self, url: str, stream: bool = False) -> httpx.Response:
         parsed = urlparse(url)
@@ -93,14 +107,15 @@ class HTTPDownloader:
             logger.warning(f"Robots.txt forbids crawling url: {url}")
 
         # Domain-specific adaptive rate limiting
-        # Determine base delay for this domain
-        if domain not in self.domain_delays:
-            self.domain_delays[domain] = self.config.rate_limiting_delay_seconds
+        with self.lock:
+            # Determine base delay for this domain
+            if domain not in self.domain_delays:
+                self.domain_delays[domain] = self.config.rate_limiting_delay_seconds
 
-        # Enforce minimum delay spacing
-        last_time = self.last_request_times.get(domain, 0.0)
+            last_time = self.last_request_times.get(domain, 0.0)
+            required_delay = self.domain_delays[domain]
+
         elapsed = time.time() - last_time
-        required_delay = self.domain_delays[domain]
         if elapsed < required_delay:
             wait_time = required_delay - elapsed
             logger.info(f"Enforcing rate limit spacing for domain '{domain}': sleeping {wait_time:.2f}s")
@@ -110,8 +125,9 @@ class HTTPDownloader:
         retries = self.config.retry_count
 
         for attempt in range(1, retries + 2):
-            # Update last request time
-            self.last_request_times[domain] = time.time()
+            with self.lock:
+                # Update last request time
+                self.last_request_times[domain] = time.time()
 
             try:
                 # Add slight random jitter
@@ -145,11 +161,12 @@ class HTTPDownloader:
 
                 response.raise_for_status()
 
-                # Success: gradually cool down the delay towards config default
-                self.domain_delays[domain] = max(
-                    self.config.rate_limiting_delay_seconds,
-                    self.domain_delays[domain] * 0.8
-                )
+                with self.lock:
+                    # Success: gradually cool down the delay towards config default
+                    self.domain_delays[domain] = max(
+                        self.config.rate_limiting_delay_seconds,
+                        self.domain_delays[domain] * 0.8
+                    )
                 return response
 
             except (httpx.HTTPError, httpx.HTTPStatusError) as e:
@@ -164,10 +181,12 @@ class HTTPDownloader:
 
                 # Catch 403 Forbidden or 429 Rate Limited
                 if status_code in (403, 429):
-                    # Backoff and scale up delays adaptively
-                    current_delay = self.domain_delays[domain]
-                    new_delay = max(5.0, current_delay * 2.0)
-                    self.domain_delays[domain] = new_delay
+                    with self.lock:
+                        # Backoff and scale up delays adaptively
+                        current_delay = self.domain_delays[domain]
+                        new_delay = max(5.0, current_delay * 2.0)
+                        self.domain_delays[domain] = new_delay
+
                     logger.warning(
                         f"Encountered status {status_code} for domain '{domain}'. "
                         f"Scaling up adaptive delay to {new_delay:.1f}s. Rotating User-Agent..."

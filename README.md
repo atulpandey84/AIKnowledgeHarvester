@@ -141,6 +141,64 @@ Linux Mint Customization (category:Linux, enabled:false)
 
 ---
 
+## Local Ollama LLM & Embedding Integration Guide
+
+The Enterprise Knowledge Harvester v2 is architected to operate fully local and offline by integrating seamlessly with a local **Ollama** server. This allows you to generate semantic vector embeddings and rich AI-driven article summaries without third-party APIs.
+
+### Step 1: Install and Run Ollama
+If you haven't already, install Ollama on your Linux Mint or compatible environment.
+```bash
+curl -fsSL https://ollama.com/install.sh | sh
+```
+Start the local Ollama background service:
+```bash
+ollama serve
+```
+
+### Step 2: Download Models
+Pull your preferred embedding and LLM generation models locally.
+- **Embedding Model** (highly recommended: `nomic-embed-text` or `bge-large`):
+  ```bash
+  ollama pull nomic-embed-text
+  ```
+- **Summarization & Classification Model** (e.g., `llama3` or `mistral`):
+  ```bash
+  ollama pull llama3
+  ```
+
+### Step 3: Configure `config.yaml`
+Update your local `config.yaml` file to enable Ollama connectivity and link the pulled models:
+```yaml
+# Embedding Settings
+embedding_model: "nomic-embed-text"
+ollama_base_url: "http://localhost:11434"
+
+# LLM & AI Summarization Settings
+llm_enabled: true
+llm_model: "llama3"
+summarization_enabled: true
+summarization_settings:
+  short_len: 150
+  long_len: 500
+  bullets_count: 5
+```
+
+### Step 4: Verify Ollama Status
+Run the harvester diagnostic tool to verify the connection is active:
+```bash
+harvester doctor
+```
+Look for the output:
+`Ollama Local Server: [OK] (Base URL: http://localhost:11434)`
+
+### Step 5: Run Ingestion with AI Features
+Execute a run. The pipeline will automatically connect to Ollama to generate semantic embedding vectors for every article and build professional summaries saved into `summary.md` and indexed inside the database:
+```bash
+harvester run
+```
+
+---
+
 ## CLI Control Panel
 
 The primary operational interface is the Click command-line utility. Run the `harvester` tool:
