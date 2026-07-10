@@ -21,6 +21,10 @@ app = FastAPI(
 class WebsiteRequest(BaseModel):
     domain: str
 
+class FeedRequest(BaseModel):
+    name: str
+    url: str
+
 @app.get("/health")
 def health_check() -> Dict[str, str]:
     return {"status": "healthy", "service": "harvester-api"}
@@ -106,3 +110,51 @@ def remove_website(domain: str) -> Dict[str, Any]:
     config.search_websites.remove(clean_domain)
     config.save_to_yaml("config.yaml")
     return {"status": "removed", "domain": clean_domain}
+
+# --- RSS Feed API Management ---
+@app.get("/feeds")
+def get_feeds() -> List[Dict[str, str]]:
+    global config
+    config = AppConfig.load_from_file("config.yaml")
+    return config.rss_feeds
+
+@app.post("/feeds")
+def add_feed(payload: FeedRequest) -> Dict[str, Any]:
+    global config
+    config = AppConfig.load_from_file("config.yaml")
+
+    name_clean = payload.name.strip()
+    url_clean = payload.url.strip()
+
+    if not name_clean or not url_clean:
+        raise HTTPException(status_code=400, detail="Name and URL must not be empty.")
+
+    for f in config.rss_feeds:
+        if f.get("name", "").lower() == name_clean.lower():
+            raise HTTPException(status_code=400, detail=f"Feed with name '{name_clean}' already exists.")
+        if f.get("url", "").lower() == url_clean.lower():
+            raise HTTPException(status_code=400, detail=f"Feed URL '{url_clean}' is already registered under name '{f.get('name')}'")
+
+    config.rss_feeds.append({"name": name_clean, "url": url_clean})
+    config.save_to_yaml("config.yaml")
+    return {"status": "added", "feed": {"name": name_clean, "url": url_clean}}
+
+@app.delete("/feeds/{name}")
+def remove_feed(name: str) -> Dict[str, Any]:
+    global config
+    config = AppConfig.load_from_file("config.yaml")
+
+    name_clean = name.strip().lower()
+
+    target_feed = None
+    for f in config.rss_feeds:
+        if f.get("name", "").lower() == name_clean:
+            target_feed = f
+            break
+
+    if not target_feed:
+        raise HTTPException(status_code=404, detail=f"Feed with name '{name}' not found.")
+
+    config.rss_feeds.remove(target_feed)
+    config.save_to_yaml("config.yaml")
+    return {"status": "removed", "feed_name": target_feed["name"]}

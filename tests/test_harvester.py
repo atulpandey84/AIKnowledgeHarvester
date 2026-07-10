@@ -157,3 +157,21 @@ def test_search_websites_restriction(test_config):
     assert "ubuntu.com" in test_config.search_websites
     assert len(test_config.search_websites) == 2
     downloader.close()
+
+def test_rss_feeds_cli_api(test_config, tmp_path):
+    # Test feed config changes
+    cfg_file = tmp_path / "test_feed_config.yaml"
+    test_config.save_to_yaml(str(cfg_file))
+
+    # Check feeds
+    assert len(test_config.rss_feeds) > 0
+
+    # Mock programmatic remove
+    initial_len = len(test_config.rss_feeds)
+    target = test_config.rss_feeds[0]
+    test_config.rss_feeds.remove(target)
+    assert len(test_config.rss_feeds) == initial_len - 1
+
+    # Mock programmatic add
+    test_config.rss_feeds.append({"name": "Custom", "url": "http://custom.com/rss"})
+    assert test_config.rss_feeds[-1]["name"] == "Custom"

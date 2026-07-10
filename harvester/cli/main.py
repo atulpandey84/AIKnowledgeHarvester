@@ -189,6 +189,98 @@ def website_list(ctx):
             click.echo(f"  - {ws}")
 
 
+# --- RSS Feed Command Group ---
+@main.group(name="feed")
+def feed_group():
+    """Manage RSS feeds checked during the pipeline execution."""
+    pass
+
+@feed_group.command(name="add")
+@click.argument('name')
+@click.argument('url')
+@click.pass_context
+def feed_add(ctx, name, url):
+    """Add a new RSS feed subscription to check during harvesting."""
+    parent_ctx = ctx.parent
+    while parent_ctx and 'config' not in parent_ctx.obj:
+        parent_ctx = parent_ctx.parent
+
+    if not parent_ctx:
+        click.echo("Error: Config context not found.")
+        sys.exit(1)
+
+    config = parent_ctx.obj['config']
+    config_file = parent_ctx.obj['config_file']
+
+    name_clean = name.strip()
+    url_clean = url.strip()
+
+    # Check if name or URL already exists
+    for feed in config.rss_feeds:
+        if feed.get("name", "").lower() == name_clean.lower():
+            click.echo(f"Error: Feed named '{name_clean}' already exists.")
+            sys.exit(1)
+        if feed.get("url", "").lower() == url_clean.lower():
+            click.echo(f"Error: Feed URL '{url_clean}' is already registered under name '{feed.get('name')}'")
+            sys.exit(1)
+
+    config.rss_feeds.append({"name": name_clean, "url": url_clean})
+    config.save_to_yaml(config_file)
+    click.echo(f"Successfully added RSS feed '{name_clean}' with URL: '{url_clean}'")
+
+@feed_group.command(name="remove")
+@click.argument('name')
+@click.pass_context
+def feed_remove(ctx, name):
+    """Remove an RSS feed subscription by name."""
+    parent_ctx = ctx.parent
+    while parent_ctx and 'config' not in parent_ctx.obj:
+        parent_ctx = parent_ctx.parent
+
+    if not parent_ctx:
+        click.echo("Error: Config context not found.")
+        sys.exit(1)
+
+    config = parent_ctx.obj['config']
+    config_file = parent_ctx.obj['config_file']
+
+    name_clean = name.strip().lower()
+
+    target_feed = None
+    for feed in config.rss_feeds:
+        if feed.get("name", "").lower() == name_clean:
+            target_feed = feed
+            break
+
+    if not target_feed:
+        click.echo(f"Error: RSS feed named '{name}' not found.")
+        sys.exit(1)
+
+    config.rss_feeds.remove(target_feed)
+    config.save_to_yaml(config_file)
+    click.echo(f"Successfully removed RSS feed subscription: '{target_feed['name']}'")
+
+@feed_group.command(name="list")
+@click.pass_context
+def feed_list(ctx):
+    """List all currently subscribed RSS feeds."""
+    parent_ctx = ctx.parent
+    while parent_ctx and 'config' not in parent_ctx.obj:
+        parent_ctx = parent_ctx.parent
+
+    if not parent_ctx:
+        click.echo("Error: Config context not found.")
+        sys.exit(1)
+
+    config = parent_ctx.obj['config']
+    if not config.rss_feeds:
+        click.echo("No RSS feeds configured.")
+    else:
+        click.echo("Configured RSS feeds subscriptions:")
+        for feed in config.rss_feeds:
+            click.echo(f"  - {feed.get('name')}: {feed.get('url')}")
+
+
 @main.command()
 @click.pass_context
 def doctor(ctx):
