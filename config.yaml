@@ -1,11 +1,11 @@
-base_storage_path: KnowledgeBase
-database_path: KnowledgeBase/harvester.db
-thread_count: 4
+base_storage_path: /tmp/pytest-of-jules/pytest-5/test_unresolved_service_autore0/test_KnowledgeBase
+database_path: /tmp/pytest-of-jules/pytest-5/test_unresolved_service_autore0/test_harvester.db
+thread_count: 2
 timeout: 30.0
-retry_count: 3
+retry_count: 1
 scheduling_interval_seconds: 3600
 logging_level: INFO
-download_images: true
+download_images: false
 max_image_size_bytes: 5242880
 min_image_dimension: 100
 max_articles_per_topic: 10

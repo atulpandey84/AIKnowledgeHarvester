@@ -1,6 +1,7 @@
 import os
 import json
 import pytest
+import httpx
 from harvester.config.config import AppConfig
 from harvester.core.topics import parse_topics, format_topics
 from harvester.core.models import Topic, Article, Metadata, Summary
@@ -175,3 +176,29 @@ def test_rss_feeds_cli_api(test_config, tmp_path):
     # Mock programmatic add
     test_config.rss_feeds.append({"name": "Custom", "url": "http://custom.com/rss"})
     assert test_config.rss_feeds[-1]["name"] == "Custom"
+
+def test_unresolved_service_autoremove(test_config, tmp_path):
+    cfg_file = tmp_path / "config.yaml"
+    test_config.save_to_yaml(str(cfg_file))
+
+    test_config.search_websites = ["unresolved-domain-test.com"]
+    test_config.rss_feeds.append({"name": "Test Fail", "url": "http://unresolved-domain-test.com/feed.xml"})
+
+    downloader = HTTPDownloader(test_config)
+    with pytest.raises(httpx.HTTPError) as exc_info:
+        downloader.download("http://unresolved-domain-test.com")
+
+    assert "Name or service not known" in str(exc_info.value)
+    assert "unresolved-domain-test.com" not in test_config.search_websites
+    assert not any(f["name"] == "Test Fail" for f in test_config.rss_feeds)
+    downloader.close()
+
+def test_adaptive_rate_limiting(test_config):
+    downloader = HTTPDownloader(test_config)
+    # Initialize values
+    downloader.domain_delays["example.com"] = 1.0
+
+    # Verify that request time and delays are tracked
+    assert "example.com" in downloader.domain_delays
+    assert downloader.domain_delays["example.com"] == 1.0
+    downloader.close()

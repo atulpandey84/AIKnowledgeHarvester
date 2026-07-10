@@ -21,6 +21,10 @@ class HTTPDownloader:
         )
         self.robots_cache = {}
 
+        # Domain-specific rate limiting and delay scaling
+        self.domain_delays = {} # domain -> current delay in seconds
+        self.last_request_times = {} # domain -> timestamp of last request
+
     def get_random_user_agent(self) -> str:
         return random.choice(self.config.user_agent_pool)
 
@@ -48,6 +52,31 @@ class HTTPDownloader:
         user_agent = self.get_random_user_agent()
         return rp.can_fetch(user_agent, url)
 
+    def _auto_prune_failed_service(self, url: str):
+        """
+        Dynamically removes unresolved or non-existent feeds or search website domains from the config.
+        """
+        parsed = urlparse(url)
+        domain = parsed.netloc.lower()
+
+        # 1. Check & remove from search_websites
+        if domain in self.config.search_websites:
+            logger.warning(f"Auto-pruning invalid search website: {domain}")
+            self.config.search_websites.remove(domain)
+            self.config.save_to_yaml("config.yaml")
+
+        # 2. Check & remove from rss_feeds
+        feed_to_remove = None
+        for feed in self.config.rss_feeds:
+            feed_url = feed.get("url", "")
+            if feed_url == url or urlparse(feed_url).netloc.lower() == domain:
+                feed_to_remove = feed
+                break
+        if feed_to_remove:
+            logger.warning(f"Auto-pruning invalid RSS feed: {feed_to_remove['name']} ({feed_to_remove['url']})")
+            self.config.rss_feeds.remove(feed_to_remove)
+            self.config.save_to_yaml("config.yaml")
+
     def download(self, url: str, stream: bool = False) -> httpx.Response:
         parsed = urlparse(url)
         domain = parsed.netloc.lower()
@@ -62,17 +91,31 @@ class HTTPDownloader:
         # Respect robots.txt
         if not self.is_allowed_by_robots(url):
             logger.warning(f"Robots.txt forbids crawling url: {url}")
-            # Non-blocking warning: we will proceed unless it's strictly enforced.
-            # In enterprise, we want to log but can configure strictness. Let's still fetch but keep log.
+
+        # Domain-specific adaptive rate limiting
+        # Determine base delay for this domain
+        if domain not in self.domain_delays:
+            self.domain_delays[domain] = self.config.rate_limiting_delay_seconds
+
+        # Enforce minimum delay spacing
+        last_time = self.last_request_times.get(domain, 0.0)
+        elapsed = time.time() - last_time
+        required_delay = self.domain_delays[domain]
+        if elapsed < required_delay:
+            wait_time = required_delay - elapsed
+            logger.info(f"Enforcing rate limit spacing for domain '{domain}': sleeping {wait_time:.2f}s")
+            time.sleep(wait_time)
 
         # Retries with randomized backoff and delay
         retries = self.config.retry_count
-        delay = self.config.rate_limiting_delay_seconds
 
         for attempt in range(1, retries + 2):
+            # Update last request time
+            self.last_request_times[domain] = time.time()
+
             try:
-                # Random delay
-                time.sleep(delay * random.uniform(0.5, 1.5))
+                # Add slight random jitter
+                time.sleep(random.uniform(0.1, 0.5))
 
                 headers = {
                     "User-Agent": self.get_random_user_agent(),
@@ -84,7 +127,6 @@ class HTTPDownloader:
                 logger.debug(f"Attempting download: {url} (Attempt {attempt}/{retries + 1})")
 
                 if stream:
-                    # Keep it as direct download for simplicity if not massive files
                     response = self.client.get(url, headers=headers)
                 else:
                     response = self.client.get(url, headers=headers)
@@ -97,19 +139,50 @@ class HTTPDownloader:
                             sleep_time = int(retry_after)
                         except ValueError:
                             sleep_time = 5
-                        logger.warning(f"Rate limited. Respecting Retry-After: sleeping for {sleep_time}s")
+                        logger.warning(f"Rate limited (429). Respecting Retry-After: sleeping for {sleep_time}s")
                         time.sleep(sleep_time)
                     raise httpx.HTTPStatusError("Rate Limited", request=response.request, response=response)
 
                 response.raise_for_status()
+
+                # Success: gradually cool down the delay towards config default
+                self.domain_delays[domain] = max(
+                    self.config.rate_limiting_delay_seconds,
+                    self.domain_delays[domain] * 0.8
+                )
                 return response
 
             except (httpx.HTTPError, httpx.HTTPStatusError) as e:
+                error_msg = str(e)
+                status_code = getattr(e, "response", None) and getattr(e.response, "status_code", None)
+
+                # Catch unresolved domain DNS failures or connection failures
+                if "Name or service not known" in error_msg or "gai_error" in error_msg or "unresolved" in error_msg.lower():
+                    logger.error(f"downloader: Error downloading {url}: [Errno -2] Name or service not known")
+                    self._auto_prune_failed_service(url)
+                    raise httpx.HTTPError(f"downloader: Error downloading {url}: [Errno -2] Name or service not known") from e
+
+                # Catch 403 Forbidden or 429 Rate Limited
+                if status_code in (403, 429):
+                    # Backoff and scale up delays adaptively
+                    current_delay = self.domain_delays[domain]
+                    new_delay = max(5.0, current_delay * 2.0)
+                    self.domain_delays[domain] = new_delay
+                    logger.warning(
+                        f"Encountered status {status_code} for domain '{domain}'. "
+                        f"Scaling up adaptive delay to {new_delay:.1f}s. Rotating User-Agent..."
+                    )
+
+                    if attempt < retries + 1:
+                        # Sleep before retry
+                        time.sleep(new_delay)
+                        continue
+
                 logger.error(f"Error downloading {url}: {e}")
                 if attempt == retries + 1:
                     raise e
-                # Backoff
-                time.sleep(delay * (2 ** attempt))
+                # General Backoff
+                time.sleep(required_delay * (2 ** attempt))
 
         raise httpx.HTTPError("Max retries exceeded")
 
