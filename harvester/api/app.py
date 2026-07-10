@@ -4,6 +4,7 @@ from typing import List, Dict, Any, Optional
 from harvester.config import config as app_conf_module
 from harvester.config.config import AppConfig
 from harvester.database.sqlite_db import SQLiteDatabase
+from harvester.core.rag import LocalRAGQueryEngine
 from harvester.logging_util import get_logger
 
 logger = get_logger()
@@ -24,6 +25,10 @@ class WebsiteRequest(BaseModel):
 class FeedRequest(BaseModel):
     name: str
     url: str
+
+class RAGRequest(BaseModel):
+    question: str
+    top_k: int = 3
 
 @app.get("/health")
 def health_check() -> Dict[str, str]:
@@ -158,3 +163,19 @@ def remove_feed(name: str) -> Dict[str, Any]:
     config.rss_feeds.remove(target_feed)
     config.save_to_yaml("config.yaml")
     return {"status": "removed", "feed_name": target_feed["name"]}
+
+# --- Local RAG Grounded Query REST Endpoint ---
+@app.post("/ask")
+def ask_local_rag(payload: RAGRequest) -> Dict[str, Any]:
+    """
+    Exposes Local RAG Query Engine to retrieve semantically matching context blocks
+    and synthesize an answer grounded strictly in local harvested knowledge.
+    """
+    try:
+        global config
+        config = AppConfig.load_from_file("config.yaml")
+        rag_engine = LocalRAGQueryEngine(config, db)
+        return rag_engine.query(payload.question, top_k=payload.top_k)
+    except Exception as e:
+        logger.error(f"Local RAG ask endpoint failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))

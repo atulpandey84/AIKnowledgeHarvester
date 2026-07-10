@@ -13,6 +13,7 @@ from harvester.database.sqlite_db import SQLiteDatabase
 from harvester.embeddings.generator import EmbeddingGenerator, cosine_similarity
 from harvester.core.ai import AIService
 from harvester.storage.manager import StorageManager
+from harvester.core.rag import LocalRAGQueryEngine
 
 @pytest.fixture
 def test_config(tmp_path):
@@ -202,3 +203,25 @@ def test_adaptive_rate_limiting(test_config):
     assert "example.com" in downloader.domain_delays
     assert downloader.domain_delays["example.com"] == 1.0
     downloader.close()
+
+def test_local_rag_engine(test_config):
+    db = SQLiteDatabase(test_config)
+    meta = Metadata(
+        title="Python 3.12 release details",
+        source_url="http://python_test.com",
+        sha256="test_sha_rag",
+        harvest_timestamp="2026-07-01 12:00:00",
+        topic="Programming"
+    )
+    art = Article(
+        title="Python 3.12 release details",
+        body_text="Python 3.12 contains massive security enhancements.",
+        metadata=meta
+    )
+    db.insert_article(art)
+
+    rag = LocalRAGQueryEngine(test_config, db)
+    res = rag.query("What's new in Python?")
+    assert "query" in res
+    assert "answer" in res
+    assert "sources" in res

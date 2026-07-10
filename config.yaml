@@ -1,5 +1,5 @@
-base_storage_path: /tmp/pytest-of-jules/pytest-8/test_unresolved_service_autore0/test_KnowledgeBase
-database_path: /tmp/pytest-of-jules/pytest-8/test_unresolved_service_autore0/test_harvester.db
+base_storage_path: /tmp/pytest-of-jules/pytest-9/test_unresolved_service_autore0/test_KnowledgeBase
+database_path: /tmp/pytest-of-jules/pytest-9/test_unresolved_service_autore0/test_harvester.db
 thread_count: 2
 timeout: 30.0
 retry_count: 1

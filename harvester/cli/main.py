@@ -8,6 +8,7 @@ from harvester.core.topics import parse_topics, format_topics
 from harvester.core.models import Topic
 from harvester.workers.pipeline import HarvestingPipeline
 from harvester.database.sqlite_db import SQLiteDatabase
+from harvester.core.rag import LocalRAGQueryEngine
 from harvester.logging_util import setup_logging, get_logger
 
 logger = get_logger()
@@ -281,6 +282,32 @@ def feed_list(ctx):
         click.echo("Configured RSS feeds subscriptions:")
         for feed in config.rss_feeds:
             click.echo(f"  - {feed.get('name')}: {feed.get('url')}")
+
+
+# --- Local RAG Grounded Answer Command ---
+@main.command(name="ask")
+@click.argument("question")
+@click.option("--top-k", default=3, help="Max source context blocks to retrieve.")
+@click.pass_context
+def ask(ctx, question, top_k):
+    """Query your local Ollama LLM grounded strictly on freshly harvested offline knowledge."""
+    config = ctx.obj['config']
+    db = SQLiteDatabase(config)
+
+    click.echo(f"Executing Grounded Semantic Query: '{question}'...")
+    rag_engine = LocalRAGQueryEngine(config, db)
+    res = rag_engine.query(question, top_k=top_k)
+
+    click.echo("\n" + "="*40 + " GROUNDED ANSWER " + "="*40)
+    click.echo(res["answer"])
+    click.echo("="*97)
+
+    if res["sources"]:
+        click.echo("\n--- Harvested Context Sources ---")
+        for i, s in enumerate(res["sources"], 1):
+            click.echo(f" {i}. {s['title']} ({s['source_url']}) - Cosine Similarity: {s['score']}")
+    else:
+        click.echo("\nNo relevant freshly harvested local sources were found for this query.")
 
 
 @main.command()
